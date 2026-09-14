@@ -89,7 +89,7 @@ function recordRequest(pathname, statusCode) {
 function operationalSnapshot() {
   return {
     service: 'signalforge',
-    version: '1.2.0',
+    version: '1.3.0',
     uptimeSeconds: Math.floor((Date.now() - STARTED_AT) / 1000),
     requests: metrics.requests,
     errors: metrics.errors,
@@ -185,10 +185,29 @@ function extract(html, url) {
   const audience = /developer|api|sdk|code/i.test(text) ? ['Developers', 'Technical founders'] :
                    /saas|founder|startup/i.test(text) ? ['SaaS founders', 'Growth teams'] :
                    ['Product teams', 'Modern businesses'];
+  const audienceSignal = /developer|api|sdk|code|saas|founder|startup|team|business/i.test(text);
+  const confidence = {
+    productName: title ? 96 : 68,
+    oneLiner: metaDescription ? 94 : headings[0] ? 76 : 42,
+    positioning: headings[0] ? 92 : metaDescription ? 82 : 45,
+    audience: audienceSignal ? 72 : 48,
+    features: featureCandidates.length >= 3 ? 90 : featureCandidates.length ? 75 : headings.length ? 60 : 35,
+    tone: text.length >= 800 ? 66 : text.length >= 250 ? 58 : 45
+  };
+  confidence.overall = Math.round((confidence.productName + confidence.oneLiner + confidence.positioning + confidence.audience + confidence.features + confidence.tone) / 6);
+  const provenance = {
+    productName: title ? 'page title' : 'domain name',
+    oneLiner: metaDescription ? 'meta description' : headings[0] ? 'primary heading' : 'fallback synthesis',
+    positioning: headings[0] ? 'primary heading' : metaDescription ? 'meta description' : 'fallback synthesis',
+    audience: audienceSignal ? 'visible page language' : 'low-evidence heuristic',
+    features: featureCandidates.length ? 'visible H1-H3 headings' : headings.length ? 'visible headings' : 'insufficient visible evidence',
+    tone: text.length >= 250 ? 'visible page copy' : 'limited page copy'
+  };
 
   return {
     id: crypto.randomUUID(),
     sourceUrl: url,
+    sourcePath: new URL(url).pathname || '/',
     scannedAt: new Date().toISOString(),
     productName,
     oneLiner: metaDescription || headings[0] || `${productName} helps customers get better results with less friction.`,
@@ -201,11 +220,14 @@ function extract(html, url) {
     avoidPhrases: ['revolutionary', 'game-changing', 'unlock the power of'],
     colors: colors.length ? colors : ['#6D5EF8', '#17171B', '#F4F2FF'],
     logoAssets: ogImage ? [ogImage] : [],
+    confidence,
+    provenance,
     evidence: {
       title,
       metaDescription,
       headings,
       ctas: buttons,
+      stats: { headings: headings.length, ctas: buttons.length, colors: colors.length, textCharacters: text.length },
       textSample: text.slice(0, 2800)
     },
     learnedPreferences: []
@@ -268,7 +290,7 @@ async function fetchSafeHtml(input, signal, redirects = 0) {
     redirect: 'manual',
     signal,
     headers: {
-      'User-Agent': 'SignalForgeBot/1.1 (+marketing product scanner)',
+      'User-Agent': 'SignalForgeBot/1.3 (+marketing product scanner)',
       'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1'
     }
   });
@@ -492,7 +514,7 @@ async function refine(memory, asset, instruction) {
 }
 
 async function api(req, res, pathname) {
-  if (req.method === 'GET' && pathname === '/api/health') return send(res, 200, { ok: true, service: 'signalforge', version: '1.2.0', uptimeSeconds: Math.floor((Date.now() - STARTED_AT) / 1000), time: new Date().toISOString() });
+  if (req.method === 'GET' && pathname === '/api/health') return send(res, 200, { ok: true, service: 'signalforge', version: '1.3.0', uptimeSeconds: Math.floor((Date.now() - STARTED_AT) / 1000), time: new Date().toISOString() });
   if (req.method === 'GET' && pathname === '/api/ready') return send(res, 200, { ok: true, service: 'signalforge', ai: process.env.OPENAI_API_KEY ? 'configured' : 'deterministic-fallback', time: new Date().toISOString() });
   if (req.method === 'GET' && pathname === '/api/metrics') {
     if (process.env.METRICS_PUBLIC !== '1') return send(res, 404, { error: 'Not found' });
@@ -610,7 +632,7 @@ function shutdown(signal) {
 }
 
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => console.log(JSON.stringify({ level: 'info', type: 'startup', service: 'signalforge', version: '1.2.0', port: PORT, time: new Date().toISOString() })));
+  server.listen(PORT, () => console.log(JSON.stringify({ level: 'info', type: 'startup', service: 'signalforge', version: '1.3.0', port: PORT, time: new Date().toISOString() })));
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.once('SIGINT', () => shutdown('SIGINT'));
 }

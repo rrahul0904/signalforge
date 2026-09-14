@@ -12,7 +12,7 @@
 - Content Security Policy, nosniff, permissions policy and referrer policy.
 - LLM provider fallback instead of hard failure.
 - No client-side API keys.
-- User-editable evidence-backed Product Memory.
+- User-editable evidence-backed Product Memory with deterministic confidence/provenance metadata.
 - Structured selective refinement that preserves untouched creative fields.
 - Health (`/api/health`) and readiness (`/api/ready`) endpoints.
 - Correlatable `X-Request-ID` responses and JSON access/error logs.

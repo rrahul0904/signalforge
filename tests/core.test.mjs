@@ -11,6 +11,10 @@ test('extract builds product memory from HTML', () => {
   assert.ok(m.features.includes('Ship decisions faster'));
   assert.ok(m.colors.includes('#6D5EF8'));
   assert.equal(m.logoAssets[0],'https://acme.com/og.png');
+  assert.ok(m.confidence.overall >= 65);
+  assert.ok(m.confidence.overall <= 95);
+  assert.equal(m.provenance.oneLiner,'meta description');
+  assert.equal(m.evidence.stats.headings,2);
 });
 
 test('local generation is complete and brand-grounded', () => {
@@ -79,7 +83,7 @@ test('rate limiter is route-scoped and health endpoints are exempt',()=>{
 test('operational snapshot is sanitized and versioned',()=>{
   const snapshot=operationalSnapshot();
   assert.equal(snapshot.service,'signalforge');
-  assert.equal(snapshot.version,'1.2.0');
+  assert.equal(snapshot.version,'1.3.0');
   assert.equal(typeof snapshot.requests,'number');
   assert.equal(typeof snapshot.provider.fallbacks,'number');
   assert.equal(Object.hasOwn(snapshot,'clientIps'),false);

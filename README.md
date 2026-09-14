@@ -8,6 +8,7 @@ SignalForge is inspired by the workflow observed in products such as SiteSyn, bu
 
 - Public URL scanning with SSRF protections, timeouts, content-type validation, title/meta/heading/CTA extraction, visual color token extraction, and source evidence.
 - Persistent editable Product Memory in the browser with revision history UI and one-click restore.
+- Evidence-derived confidence scores and provenance for positioning, audience, features and source quality—no decorative hard-coded confidence in the actual workspace.
 - Audience, features, brand palette, learned-preference editing.
 - Marketing chat with deterministic no-key fallback and optional OpenAI Responses adapter.
 - Structured social creative generation in 1:1, 4:5, 9:16, and 16:9 formats.

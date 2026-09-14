@@ -4,3 +4,4 @@
 
 
 .revision-history{display:grid;gap:10px}.revision-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.revision-row>div{display:grid;gap:3px}.revision-row small{color:var(--muted);font-size:11px}.recent-chip{display:block;width:100%;border:0;text-align:left;cursor:pointer;font:inherit}.recent-chip:hover{filter:brightness(1.08)}
+.confidence-pill{font-size:9px;font-weight:750;letter-spacing:.04em;padding:6px 8px;border-radius:999px;border:1px solid #3a3744;background:#15141a;color:#aaa6b4}.confidence-pill[data-level=high]{color:#8fd7ad;border-color:#28513b;background:#0f1d16}.confidence-pill[data-level=medium]{color:#d6bc7b;border-color:#5a4826;background:#211b10}.confidence-pill[data-level=low]{color:#e29a93;border-color:#5a302d;background:#211312}.evidence-quality strong{color:#d8d3e6;font-size:11px}
