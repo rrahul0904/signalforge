@@ -1,87 +1,89 @@
 # SignalForge
 
-SignalForge is an evidence-backed Product Memory and AI marketing workspace inspired by the strongest ideas identified while reverse-engineering SiteSyn.
+A clean-room, evidence-backed implementation of the **persistent Product Memory → marketing chat → structured creative** product pattern.
 
-It turns a product URL into a reusable marketing context that can drive structured social creatives, copy, refinements and competitor intelligence without requiring the user to restate the product on every prompt.
+SignalForge is inspired by the workflow observed in products such as SiteSyn, but does **not** copy proprietary source code, private prompts, branding, or assets.
 
-## What works
+## What works now
 
-- URL scanning with SSRF protection and redirect-by-redirect validation
-- Evidence-backed Product Memory extraction
-- Brand palette and messaging extraction
-- Audience, feature, positioning and preference memory
-- Structured creative generation
-- Selective creative refinement without regenerating untouched fields
-- Multiple output formats (1:1, 4:5, 9:16, 16:9)
-- PNG and copy export
-- Competitor scan/comparison
-- Product Memory revision history + restore
-- Recent creative persistence
-- Free/Pro usage metering
-- Deterministic fallback generation when no AI API key is configured
-- Optional external LLM integration
-- Docker + Railway deployment configuration
-- Automated unit, surface, smoke, and Docker CI checks
+- Public URL scanning with SSRF protections, timeouts, content-type validation, title/meta/heading/CTA extraction, visual color token extraction, and source evidence.
+- Persistent editable Product Memory in the browser with revision history UI and one-click restore.
+- Audience, features, brand palette, learned-preference editing.
+- Marketing chat with deterministic no-key fallback and optional OpenAI Responses adapter.
+- Structured social creative generation in 1:1, 4:5, 9:16, and 16:9 formats.
+- True selective refinement flow: format, palette, headline and other structured fields can change without rebuilding untouched fields.
+- Preference learning from refinements (dark, short/punchy, minimal).
+- Real PNG export rendered in-browser from structured creative data.
+- Copy-to-clipboard marketing copy.
+- Competitor URL scanning and side-by-side evidence comparison.
+- Daily usage metering with Free/Pro demo plans.
+- Recent creative history with one-click restore.
+- Responsive polished dashboard.
+- No package dependencies required for the core app.
 
-## Run locally
-
-Requirements: Node.js 20+
+## Run
 
 ```bash
 npm start
+# open http://localhost:3000
 ```
 
-Then open `http://localhost:3000`.
+Optional demo Product Memory:
 
-No install step is required because the core runtime intentionally has zero external npm dependencies.
+```text
+http://localhost:3000/?demo=1#studio
+```
 
-## Certification
+## Verify
 
 ```bash
 npm run certify
 ```
 
-That runs syntax checks, the Node test suite, and an HTTP smoke test against a real server process.
+GitHub Actions repeats certification on Node 20 and 22 and also verifies the production Docker image builds.
 
-## Environment
+## Optional real LLM generation
 
-Copy `.env.example` and set optional provider credentials as needed.
+The product works without credentials. To use the provider adapter:
 
-The application remains functional without an AI key by using the local deterministic generation engine.
+```bash
+cp .env.example .env
+export OPENAI_API_KEY=...
+export AI_MODEL=gpt-5.6
+npm start
+```
+
+If the provider errors, SignalForge automatically falls back to deterministic generation so the product does not become unusable.
 
 ## Architecture
 
 ```text
-Product URL
-   ↓
-Safe scanner + evidence extractor
-   ↓
-Product Memory
-   ├── facts
-   ├── positioning
-   ├── audiences
-   ├── features
-   ├── brand palette
-   └── learned preferences
-   ↓
-Creative generation / refinement / competitor intelligence
-   ↓
-Structured DesignSpec-style output
-   ↓
-Canvas preview + export
+Browser
+ ├── Overview / scanner
+ ├── Product Memory editor
+ ├── Marketing chat
+ ├── Structured creative renderer
+ ├── PNG exporter
+ └── Competitor intelligence
+        │
+        ▼
+Node HTTP service (zero dependency)
+ ├── URL safety / DNS checks
+ ├── Website fetch + evidence extraction
+ ├── Product Memory synthesis
+ └── Generation adapter
+      ├── OpenAI (optional)
+      └── deterministic fallback
 ```
 
-## Production notes
+## Production boundary
 
-See:
+The repo deliberately separates **core product functionality** from credential-dependent integrations. The following integrations are adapters, not blockers:
 
-- `docs/PRODUCTION.md`
-- `docs/RELEASE_CHECKLIST.md`
-- `SECURITY.md`
-- `docs/REVERSE_ENGINEERING.md`
+- OAuth / managed auth
+- durable Postgres persistence / RLS
+- Stripe billing
+- managed object storage
+- external image-generation provider
 
-## Current release
-
-`v1.1.0`
-
-This repository is an independently built product reconstruction based on publicly observable product behavior and does not contain SiteSyn source code or proprietary assets.
+The current application is fully runnable and testable without any of them. See `docs/PRODUCTION.md` for the production hardening path.
