@@ -1,0 +1,18 @@
+{
+  "name": "signalforge",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Evidence-backed AI marketing workspace inspired by the SiteSyn product pattern.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "test": "node --test",
+    "check": "node --check server.mjs && node --check public/app.js && npm test",
+    "smoke": "node scripts/smoke.mjs",
+    "certify": "npm run check && npm run smoke"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
