@@ -14,6 +14,20 @@ const MAX_HTML = 2_000_000;
 const MAX_REDIRECTS = 5;
 const SCAN_TIMEOUT_MS = 12_000;
 const VALID_FORMATS = new Set(['square', 'portrait', 'story', 'landscape']);
+const STARTED_AT = Date.now();
+const RATE_WINDOW_MS = Number(process.env.RATE_WINDOW_MS || 60_000);
+const RATE_LIMIT_API = Number(process.env.RATE_LIMIT_API || 120);
+const RATE_LIMIT_SCAN = Number(process.env.RATE_LIMIT_SCAN || 20);
+const RATE_LIMIT_GENERATE = Number(process.env.RATE_LIMIT_GENERATE || 60);
+const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS || 10_000);
+const rateBuckets = new Map();
+const metrics = {
+  requests: 0,
+  errors: 0,
+  rateLimited: 0,
+  routes: Object.create(null),
+  provider: { attempts: 0, successes: 0, fallbacks: 0 }
+};
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -24,6 +38,81 @@ const mime = {
   '.png': 'image/png',
   '.ico': 'image/x-icon'
 };
+
+function requestIdFrom(req) {
+  const candidate = String(req.headers['x-request-id'] || '').trim();
+  return /^[a-zA-Z0-9._:-]{1,100}$/.test(candidate) ? candidate : crypto.randomUUID();
+}
+
+function clientKey(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket?.remoteAddress || 'unknown';
+}
+
+function rateLimitFor(pathname) {
+  if (pathname === '/api/scan') return RATE_LIMIT_SCAN;
+  if (pathname === '/api/generate' || pathname === '/api/refine') return RATE_LIMIT_GENERATE;
+  return RATE_LIMIT_API;
+}
+
+function consumeRateLimit(req, pathname, now = Date.now()) {
+  if (!pathname.startsWith('/api/') || ['/api/health', '/api/ready', '/api/metrics'].includes(pathname)) {
+    return { allowed: true, remaining: null, resetAt: now };
+  }
+  const limit = Math.max(1, rateLimitFor(pathname));
+  const key = `${clientKey(req)}:${pathname}`;
+  const current = rateBuckets.get(key);
+  const bucket = !current || current.resetAt <= now ? { count: 0, resetAt: now + RATE_WINDOW_MS } : current;
+  bucket.count += 1;
+  rateBuckets.set(key, bucket);
+  if (rateBuckets.size > 5000) {
+    for (const [bucketKey, value] of rateBuckets) {
+      if (value.resetAt <= now) rateBuckets.delete(bucketKey);
+      if (rateBuckets.size <= 4000) break;
+    }
+  }
+  return {
+    allowed: bucket.count <= limit,
+    remaining: Math.max(0, limit - bucket.count),
+    resetAt: bucket.resetAt,
+    limit
+  };
+}
+
+function recordRequest(pathname, statusCode) {
+  metrics.requests += 1;
+  if (statusCode >= 400) metrics.errors += 1;
+  const route = pathname.startsWith('/api/') ? pathname : 'static';
+  metrics.routes[route] = (metrics.routes[route] || 0) + 1;
+}
+
+function operationalSnapshot() {
+  return {
+    service: 'signalforge',
+    version: '1.2.0',
+    uptimeSeconds: Math.floor((Date.now() - STARTED_AT) / 1000),
+    requests: metrics.requests,
+    errors: metrics.errors,
+    rateLimited: metrics.rateLimited,
+    routes: { ...metrics.routes },
+    provider: { ...metrics.provider },
+    aiConfigured: Boolean(process.env.OPENAI_API_KEY)
+  };
+}
+
+function logRequest({ requestId, method, pathname, statusCode, durationMs }) {
+  const line = {
+    level: statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info',
+    type: 'http_request',
+    requestId,
+    method,
+    pathname,
+    statusCode,
+    durationMs,
+    time: new Date().toISOString()
+  };
+  console.log(JSON.stringify(line));
+}
 
 function send(res, status, payload, headers = {}) {
   const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -368,8 +457,14 @@ async function llmRefine(memory, asset, instruction) {
 
 async function generate(memory, prompt, format) {
   if (process.env.OPENAI_API_KEY) {
-    try { return await llmGenerate(memory, prompt, format); }
+    metrics.provider.attempts += 1;
+    try {
+      const result = await llmGenerate(memory, prompt, format);
+      metrics.provider.successes += 1;
+      return result;
+    }
     catch (error) {
+      metrics.provider.fallbacks += 1;
       const fallback = localGenerate(memory, prompt, format);
       fallback.providerWarning = `AI provider unavailable; deterministic fallback used (${error.message}).`;
       return fallback;
@@ -380,8 +475,14 @@ async function generate(memory, prompt, format) {
 
 async function refine(memory, asset, instruction) {
   if (process.env.OPENAI_API_KEY) {
-    try { return await llmRefine(memory, asset, instruction); }
+    metrics.provider.attempts += 1;
+    try {
+      const result = await llmRefine(memory, asset, instruction);
+      metrics.provider.successes += 1;
+      return result;
+    }
     catch (error) {
+      metrics.provider.fallbacks += 1;
       const fallback = localRefine(memory, asset, instruction);
       fallback.providerWarning = `AI provider unavailable; deterministic selective edit used (${error.message}).`;
       return fallback;
@@ -391,7 +492,12 @@ async function refine(memory, asset, instruction) {
 }
 
 async function api(req, res, pathname) {
-  if (req.method === 'GET' && pathname === '/api/health') return send(res, 200, { ok: true, service: 'signalforge', time: new Date().toISOString() });
+  if (req.method === 'GET' && pathname === '/api/health') return send(res, 200, { ok: true, service: 'signalforge', version: '1.2.0', uptimeSeconds: Math.floor((Date.now() - STARTED_AT) / 1000), time: new Date().toISOString() });
+  if (req.method === 'GET' && pathname === '/api/ready') return send(res, 200, { ok: true, service: 'signalforge', ai: process.env.OPENAI_API_KEY ? 'configured' : 'deterministic-fallback', time: new Date().toISOString() });
+  if (req.method === 'GET' && pathname === '/api/metrics') {
+    if (process.env.METRICS_PUBLIC !== '1') return send(res, 404, { error: 'Not found' });
+    return send(res, 200, operationalSnapshot());
+  }
   if (req.method === 'POST' && pathname === '/api/scan') {
     try {
       const { url } = await readJson(req);
@@ -447,14 +553,66 @@ async function serveStatic(req, res, pathname) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  if (url.pathname.startsWith('/api/')) return api(req, res, url.pathname);
-  if (!['GET', 'HEAD'].includes(req.method || 'GET')) return send(res, 405, 'Method not allowed', { Allow: 'GET, HEAD' });
-  return serveStatic(req, res, url.pathname);
+  const started = performance.now();
+  const requestId = requestIdFrom(req);
+  res.setHeader('X-Request-ID', requestId);
+  let pathname = '/';
+
+  res.on('finish', () => {
+    recordRequest(pathname, res.statusCode);
+    logRequest({
+      requestId,
+      method: req.method || 'GET',
+      pathname,
+      statusCode: res.statusCode,
+      durationMs: Number((performance.now() - started).toFixed(1))
+    });
+  });
+
+  try {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    pathname = url.pathname;
+    const rate = consumeRateLimit(req, pathname);
+    if (!rate.allowed) {
+      metrics.rateLimited += 1;
+      const retryAfter = Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000));
+      return send(res, 429, { error: 'Rate limit exceeded. Try again shortly.' }, {
+        'Retry-After': String(retryAfter),
+        'X-RateLimit-Limit': String(rate.limit),
+        'X-RateLimit-Remaining': '0'
+      });
+    }
+    if (rate.remaining !== null) {
+      res.setHeader('X-RateLimit-Limit', String(rate.limit));
+      res.setHeader('X-RateLimit-Remaining', String(rate.remaining));
+    }
+    if (pathname.startsWith('/api/')) return api(req, res, pathname);
+    if (!['GET', 'HEAD'].includes(req.method || 'GET')) return send(res, 405, 'Method not allowed', { Allow: 'GET, HEAD' });
+    return serveStatic(req, res, pathname);
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', type: 'unhandled_request_error', requestId, pathname, message: error.message, time: new Date().toISOString() }));
+    if (!res.headersSent) return send(res, 500, { error: 'Internal server error', requestId });
+    res.end();
+  }
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => console.log(`SignalForge running at http://localhost:${PORT}`));
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(JSON.stringify({ level: 'info', type: 'shutdown', signal, time: new Date().toISOString() }));
+  const timer = setTimeout(() => process.exit(1), SHUTDOWN_TIMEOUT_MS);
+  timer.unref();
+  server.close(() => {
+    clearTimeout(timer);
+    process.exit(0);
+  });
 }
 
-export { extract, localGenerate, localRefine, isPrivateIp, selectPalette, normalizeFormat, resolveRedirectUrl };
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => console.log(JSON.stringify({ level: 'info', type: 'startup', service: 'signalforge', version: '1.2.0', port: PORT, time: new Date().toISOString() })));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+}
+
+export { extract, localGenerate, localRefine, isPrivateIp, selectPalette, normalizeFormat, resolveRedirectUrl, consumeRateLimit, operationalSnapshot };
