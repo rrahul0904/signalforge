@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';
-const { extract, localGenerate, localRefine, isPrivateIp, selectPalette, normalizeFormat, resolveRedirectUrl } = await import('../server.mjs');
+const { extract, localGenerate, localRefine, isPrivateIp, selectPalette, normalizeFormat, resolveRedirectUrl, consumeRateLimit, operationalSnapshot } = await import('../server.mjs');
 
 test('extract builds product memory from HTML', () => {
   const html=`<html><head><title>Acme — Fast analytics</title><meta name="description" content="Analytics for modern teams"><meta property="og:image" content="https://acme.com/og.png"><style>:root{--brand:#6D5EF8}</style></head><body><h1>Ship decisions faster</h1><h2>Realtime dashboards for every team</h2><a>Start free</a></body></html>`;
@@ -63,4 +63,24 @@ test('private addresses are rejected by helper',()=>{
 test('redirect resolution keeps relative redirects explicit for revalidation',()=>{
   assert.equal(resolveRedirectUrl(new URL('https://example.com/a'),'../b').href,'https://example.com/b');
   assert.equal(resolveRedirectUrl(new URL('https://example.com/a'),'http://127.0.0.1/admin').hostname,'127.0.0.1');
+});
+
+test('rate limiter is route-scoped and health endpoints are exempt',()=>{
+  const req={headers:{'x-forwarded-for':'203.0.113.77'},socket:{remoteAddress:'203.0.113.77'}};
+  let last;
+  for(let i=0;i<20;i++) last=consumeRateLimit(req,'/api/scan',1_000);
+  assert.equal(last.allowed,true);
+  const blocked=consumeRateLimit(req,'/api/scan',1_000);
+  assert.equal(blocked.allowed,false);
+  assert.equal(blocked.remaining,0);
+  for(let i=0;i<500;i++) assert.equal(consumeRateLimit(req,'/api/health',1_000).allowed,true);
+});
+
+test('operational snapshot is sanitized and versioned',()=>{
+  const snapshot=operationalSnapshot();
+  assert.equal(snapshot.service,'signalforge');
+  assert.equal(snapshot.version,'1.2.0');
+  assert.equal(typeof snapshot.requests,'number');
+  assert.equal(typeof snapshot.provider.fallbacks,'number');
+  assert.equal(Object.hasOwn(snapshot,'clientIps'),false);
 });
