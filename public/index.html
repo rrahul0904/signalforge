@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b0b0e" />
+  <meta name="description" content="SignalForge turns a product URL into persistent marketing intelligence and on-brand assets." />
+  <title>SignalForge — Product-aware marketing workspace</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" data-view="home"><span class="brand-mark">S</span><span>SignalForge</span><small>BETA</small></a>
+    <nav class="topnav">
+      <button class="nav-link active" data-view="home">Overview</button>
+      <button class="nav-link" data-view="studio">Studio</button>
+      <button class="nav-link" data-view="memory">Memory</button>
+      <button class="nav-link" data-view="intel">Intel</button>
+    </nav>
+    <div class="top-actions">
+      <span id="usagePill" class="usage-pill">0 / 20 today</span>
+      <button id="upgradeBtn" class="btn btn-ghost">Free plan</button>
+      <button id="profileBtn" class="avatar" aria-label="Profile">RS</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-home" class="view active">
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="pulse"></span> Persistent product intelligence</div>
+          <h1>Your product is built.<br><em>Now make it impossible to ignore.</em></h1>
+          <p class="hero-sub">Scan your product once. SignalForge builds evidence-backed Product Memory, then uses it to create sharper positioning, social assets, and campaign ideas without generic prompts.</p>
+          <form id="scanForm" class="scan-box">
+            <span class="globe">◎</span>
+            <input id="scanUrl" type="text" placeholder="yourproduct.com" autocomplete="url" aria-label="Product URL" />
+            <button class="btn btn-primary" type="submit"><span>Scan product</span><b>→</b></button>
+          </form>
+          <div class="trust-row"><span>✓ No credit card</span><span>✓ Editable memory</span><span>✓ Evidence attached</span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+          <div class="memory-card mc-a"><span>POSITIONING</span><b>Evidence-backed</b><i>94% confidence</i></div>
+          <div class="memory-card mc-b"><span>AUDIENCE</span><b>Technical founders</b><i>From 3 pages</i></div>
+          <div class="memory-card mc-c"><span>BRAND</span><div class="swatches"><i></i><i></i><i></i></div><b>Visual DNA saved</b></div>
+          <div class="core-orb"><span>PRODUCT<br>MEMORY</span></div>
+        </div>
+      </div>
+
+      <div class="section-pad">
+        <div class="section-kicker">THE WORKFLOW</div>
+        <div class="step-grid">
+          <article><b>01</b><h3>Read the product</h3><p>Fetch the public site, pull positioning, features, CTAs, visual tokens and source evidence.</p></article>
+          <article><b>02</b><h3>Build Product Memory</h3><p>Turn source evidence into editable facts, brand rules, audiences and preference history.</p></article>
+          <article><b>03</b><h3>Create through chat</h3><p>Generate campaign copy and structured visual assets that stay aligned with the product.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-studio" class="view app-view">
+      <aside class="rail">
+        <div class="rail-label">WORKSPACE</div>
+        <button class="rail-item active" data-view="studio">✦ <span>Marketing Studio</span></button>
+        <button class="rail-item" data-view="memory">◈ <span>Product Memory</span></button>
+        <button class="rail-item" data-view="intel">⌁ <span>Competitor Intel</span></button>
+        <div class="rail-label">RECENT</div>
+        <div id="recentList" class="recent-list"><p class="muted tiny">No generations yet.</p></div>
+        <div class="rail-bottom"><button id="newProductBtn" class="rail-item">＋ <span>Scan another product</span></button></div>
+      </aside>
+      <div class="workspace studio-layout">
+        <section class="chat-panel">
+          <div class="panel-head">
+            <div><span class="status-dot"></span><b>Marketing agent</b><small id="agentContext">Waiting for Product Memory</small></div>
+            <button id="clearChat" class="icon-btn" title="Clear chat">↺</button>
+          </div>
+          <div id="chatFeed" class="chat-feed">
+            <div class="agent-message welcome-msg"><span class="agent-icon">✦</span><div><b>I already know the product.</b><p>Ask for a launch card, positioning rewrite, feature announcement, paid ad concept, or a visual direction.</p></div></div>
+          </div>
+          <div id="suggestions" class="suggestions"></div>
+          <form id="chatForm" class="composer">
+            <textarea id="chatInput" rows="2" placeholder="Create a launch graphic for our new feature…"></textarea>
+            <div class="composer-foot">
+              <select id="formatSelect" aria-label="Asset format"><option value="square">1:1 Square</option><option value="portrait">4:5 Portrait</option><option value="story">9:16 Story</option><option value="landscape">16:9 Landscape</option></select>
+              <button class="send-btn" type="submit" aria-label="Generate">↑</button>
+            </div>
+          </form>
+        </section>
+        <section class="canvas-panel">
+          <div class="canvas-head"><div><b>Live creative</b><span id="assetStatus">No asset yet</span></div><div class="canvas-actions"><button id="copyBtn" class="btn btn-ghost btn-sm">Copy text</button><button id="exportBtn" class="btn btn-ghost btn-sm">Export PNG</button></div></div>
+          <div class="canvas-stage">
+            <div id="emptyCanvas" class="empty-canvas"><div class="spark">✦</div><h3>Your first asset will appear here.</h3><p>Generate from chat, then refine it without rebuilding everything.</p></div>
+            <div id="creative" class="creative square hidden">
+              <div class="creative-grid"></div>
+              <div class="creative-glow"></div>
+              <div class="creative-top"><span id="creativeBadge">PRODUCT-LED MARKETING</span><b id="creativeBrand">SignalForge</b></div>
+              <div class="creative-body"><div id="creativeHeadline">Meet SignalForge</div><p id="creativeSub">A clearer way to create.</p><button id="creativeCta">Learn more ↗</button></div>
+              <div class="creative-foot"><span>Built from Product Memory</span><i></i></div>
+            </div>
+          </div>
+          <div id="rationale" class="rationale hidden"><span>WHY THIS WORKS</span><p></p></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-memory" class="view app-view">
+      <aside class="rail">
+        <div class="rail-label">PRODUCT</div>
+        <button class="rail-item" data-view="studio">✦ <span>Marketing Studio</span></button>
+        <button class="rail-item active">◈ <span>Product Memory</span></button>
+        <button class="rail-item" data-view="intel">⌁ <span>Competitor Intel</span></button>
+        <div class="rail-bottom"><button id="rescanBtn" class="rail-item">↻ <span>Rescan website</span></button></div>
+      </aside>
+      <div class="workspace memory-workspace">
+        <div class="page-head"><div><div class="section-kicker">SOURCE OF TRUTH</div><h2>Product Memory</h2><p>Every generation starts here. Edit anything. Every change is versioned locally.</p></div><div class="head-actions"><span id="memorySaved" class="saved-state">✓ Saved</span><button id="saveMemory" class="btn btn-primary">Save changes</button></div></div>
+        <div id="noMemory" class="empty-state"><h3>No Product Memory yet</h3><p>Scan a public product URL to build one.</p><button class="btn btn-primary" data-view="home">Scan a product</button></div>
+        <div id="memoryEditor" class="memory-grid hidden">
+          <section class="memory-main card">
+            <div class="card-title"><span>01</span><div><b>Core positioning</b><small>What the product is and why it matters</small></div></div>
+            <label>Product name<input id="memName" /></label>
+            <label>One-liner<textarea id="memOneLiner" rows="3"></textarea></label>
+            <label>Positioning<textarea id="memPositioning" rows="3"></textarea></label>
+            <div class="two-col"><label>Tone<input id="memTone" /></label><label>Source URL<input id="memUrl" disabled /></label></div>
+          </section>
+          <section class="card">
+            <div class="card-title"><span>02</span><div><b>Audience</b><small>Who should care</small></div></div>
+            <div id="audienceTags" class="tag-editor"></div><div class="inline-add"><input id="newAudience" placeholder="Add audience"/><button data-add="audience">＋</button></div>
+          </section>
+          <section class="card">
+            <div class="card-title"><span>03</span><div><b>Features & proof</b><small>What is actually on the source site</small></div></div>
+            <div id="featureList" class="list-editor"></div><div class="inline-add"><input id="newFeature" placeholder="Add feature"/><button data-add="feature">＋</button></div>
+          </section>
+          <section class="card">
+            <div class="card-title"><span>04</span><div><b>Brand palette</b><small>Extracted visual tokens</small></div></div>
+            <div id="colorEditor" class="color-editor"></div>
+          </section>
+          <section class="card memory-wide">
+            <div class="card-title"><span>05</span><div><b>Learned preferences</b><small>Plain-language rules learned from your feedback</small></div></div>
+            <div id="preferenceList" class="preference-list"></div><div class="inline-add"><input id="newPreference" placeholder="e.g. Prefer dark backgrounds and terse headlines"/><button data-add="preference">＋</button></div>
+          </section>
+          <section class="card memory-wide">
+            <div class="card-title"><span>06</span><div><b>Evidence</b><small>Trace memory back to the source instead of hallucinating</small></div></div>
+            <div id="evidencePanel" class="evidence-panel"></div>
+          </section>
+          <section class="card memory-wide">
+            <div class="card-title"><span>07</span><div><b>Revision history</b><small>Restore a prior saved Product Memory snapshot</small></div></div>
+            <div id="revisionHistory" class="revision-history"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-intel" class="view app-view">
+      <aside class="rail">
+        <div class="rail-label">PRODUCT</div>
+        <button class="rail-item" data-view="studio">✦ <span>Marketing Studio</span></button>
+        <button class="rail-item" data-view="memory">◈ <span>Product Memory</span></button>
+        <button class="rail-item active">⌁ <span>Competitor Intel</span></button>
+      </aside>
+      <div class="workspace intel-workspace">
+        <div class="page-head"><div><div class="section-kicker">MARKET CONTEXT</div><h2>Competitor Intel</h2><p>Scan a public competitor URL and compare visible positioning, audience and messaging.</p></div></div>
+        <form id="competitorForm" class="competitor-scan card"><input id="competitorUrl" placeholder="competitor.com"/><button class="btn btn-primary">Scan competitor</button></form>
+        <div id="intelEmpty" class="empty-state"><h3>No competitor scan yet</h3><p>SignalForge will compare claims using public-site evidence only.</p></div>
+        <div id="intelGrid" class="intel-grid hidden"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="upgradeModal" class="modal-backdrop hidden">
+    <div class="modal"><button class="modal-close">×</button><span class="modal-kicker">SIGNALFORGE PRO</span><h2>More room to create.</h2><p>Demo billing is local-only. Production Stripe hooks are intentionally separate from core functionality.</p><div class="price"><b>$19</b><span>/month</span></div><ul><li>150 generations / day</li><li>Premium provider adapter</li><li>Watermark-free exports</li><li>Competitor scans</li></ul><button id="demoUpgrade" class="btn btn-primary btn-block">Activate Pro demo</button></div>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>
