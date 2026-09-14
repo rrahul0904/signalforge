@@ -19,6 +19,7 @@ SignalForge is inspired by the workflow observed in products such as SiteSyn, bu
 - Daily usage metering with Free/Pro demo plans.
 - Recent creative history with one-click restore.
 - Responsive polished dashboard.
+- Operational hardening: request IDs, structured request/error logs, readiness checks, bounded per-route rate limiting, sanitized provider/usage metrics, and graceful shutdown.
 - No package dependencies required for the core app.
 
 ## Run
@@ -40,7 +41,7 @@ http://localhost:3000/?demo=1#studio
 npm run certify
 ```
 
-GitHub Actions repeats certification on Node 20 and 22 and also verifies the production Docker image builds.
+GitHub Actions repeats certification on Node 20 and 22 and also verifies the production Docker image builds. The smoke suite covers readiness, generation, selective refinement, rate limiting, metrics, and SSRF rejection.
 
 ## Optional real LLM generation
 
@@ -68,6 +69,10 @@ Browser
         │
         ▼
 Node HTTP service (zero dependency)
+ ├── Health + readiness endpoints
+ ├── Request IDs + structured logs
+ ├── Per-route abuse/rate limiting
+ ├── Optional sanitized operational metrics
  ├── URL safety / DNS checks
  ├── Website fetch + evidence extraction
  ├── Product Memory synthesis
@@ -87,3 +92,11 @@ The repo deliberately separates **core product functionality** from credential-d
 - external image-generation provider
 
 The current application is fully runnable and testable without any of them. See `docs/PRODUCTION.md` for the production hardening path.
+
+## Operations
+
+- Liveness: `GET /api/health`
+- Readiness: `GET /api/ready`
+- Sanitized metrics: `GET /api/metrics` only when `METRICS_PUBLIC=1`
+- Mutating/expensive API routes emit `X-RateLimit-*` headers and return HTTP `429` with `Retry-After` when exhausted.
+- Every response includes `X-Request-ID`; access logs are emitted as JSON for host log aggregation.
