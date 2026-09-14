@@ -4,6 +4,8 @@ A clean-room, evidence-backed implementation of the **persistent Product Memory 
 
 SignalForge is inspired by the workflow observed in products such as SiteSyn, but does **not** copy proprietary source code, private prompts, branding, or assets.
 
+**Current release: v1.3.0**
+
 ## What works now
 
 - Public URL scanning with SSRF protections, timeouts, content-type validation, title/meta/heading/CTA extraction, visual color token extraction, and source evidence.
